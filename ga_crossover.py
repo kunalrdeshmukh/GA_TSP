@@ -19,4 +19,4 @@ def crossover(dna):
         curr_pos += 1
     dna = ''.join(dna)
   
-    return(pd.Series(map(str,dna)))
+    return(pd.Series(map(int,dna)))

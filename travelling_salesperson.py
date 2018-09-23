@@ -20,10 +20,11 @@ def population_generator(no_of_individuals = 1000,no_of_genes_per_individual = 1
 
 def calculate_distance(individual,**kwargs):
     a = 0
-    if (len(individual) != len(set(individual))):
-        a += 100    # penalty for a duplicate element in a list
+    # if (len(individual) != len(set(individual))):
+    #     a += 100    # penalty for a duplicate element in a list
     for _, value in kwargs.iteritems():
         a_matrix = value
+    # print individual
     for i in range(len(individual)-1):
             a += a_matrix[individual[i]][individual[i+1]]
     return a
@@ -52,6 +53,7 @@ def crossover_and_mutate(individual):
         individual = ga_mutation.mutate(individual)
     return individual
 
+
 if __name__ == '__main__':
     # create initial population
     population_size = 10
@@ -65,17 +67,20 @@ if __name__ == '__main__':
     for i in range(cities):
         distance_matrix.append(list(map(int,lines[i+1].strip().split(' '))))
     
-    # call fitness function
-    fit_population = evaluate_fitness(population,distance_matrix)
-    
-    # select fitness
-    fitter =  population.ix[fit_population]
-    fitter.index = range(len(fitter))
-    #perform crossover and mutaton
-    new_population = fitter.apply(crossover_and_mutate,axis=1)
-    children_to_add =  population_size - len(new_population)
-    # generate_new_population()
-    for i in range(children_to_add):
-        choice = random.randint(0,len(new_population)-1)
-        new_population = new_population.append(crossover_and_mutate(new_population.iloc[choice]),ignore_index=True)
-    #check stopping condition
+    for iter in range(100):
+        print "iteration : "+str(iter)
+        # call fitness function
+        fit_population = evaluate_fitness(population,distance_matrix)
+        
+        # select fitness
+        population =  population.ix[fit_population]
+        population.index = range(len(population))
+        #perform crossover and mutaton
+        population = population.apply(crossover_and_mutate,axis=1)
+        children_to_add =  population_size - len(population)
+        # generate_new_population()
+        for i in range(children_to_add):
+            choice = random.randint(0,len(population)-1)
+            population = population.append(crossover_and_mutate(population.iloc[choice]),ignore_index=True)
+    print population
+        #check stopping condition
