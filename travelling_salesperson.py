@@ -44,6 +44,11 @@ def evaluate_fitness(population,adjacency_matrix,percent_population_to_return = 
     return order[:no_to_return]
     # TODO: use certainity to select "best" candidate with probablity.
 
+def is_valid(individual):
+    if len(individual) != len(set(individual)):
+        return False
+    else :
+        return True
 
 def crossover_and_mutate(individual):
     choice = random.randint(0,100)
@@ -51,8 +56,11 @@ def crossover_and_mutate(individual):
         individual = ga_crossover.crossover(individual)
     if choice % 3 == 0:
         individual = ga_mutation.mutate(individual)
-    return individual
-
+    # TODO : do this in a optimal way
+    if is_valid(individual):
+        return individual
+    else :
+        return crossover_and_mutate(individual)
 
 if __name__ == '__main__':
     # create initial population
