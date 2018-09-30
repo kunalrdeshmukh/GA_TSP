@@ -3,14 +3,16 @@ import numpy as np
 import random
 import ga_crossover
 import ga_mutation
+import sys
 
+POPULATION_SIZE = 100
+GENERATIONS = 50
 
 def population_generator(no_of_individuals = 1000,no_of_genes_per_individual = 10):
     """ Generates a population for TSP with n no of population """
     
     assert no_of_individuals >=2 , "no_of_individuals should be >=2 provided: %r" % no_of_individuals
     assert no_of_genes_per_individual >= 3 , "numbet of genes should be >= 3 provided: %r" % no_of_genes_per_individual
-    
     population = []
     for i in range(no_of_individuals):
         individual = random.sample(range(0,no_of_genes_per_individual),no_of_genes_per_individual)
@@ -30,7 +32,7 @@ def calculate_distance(individual,**kwargs):
     return a
 
 
-def evaluate_fitness(population,adjacency_matrix,percent_population_to_return = 80 ,certainity = 100):
+def evaluate_fitness(population,adjacency_matrix,percent_population_to_return = 20 ,certainity = 100):
     """ This method evaluates the fitness of a population and returns indices of % of population 
     in "population to return with certainity passed as "certainity" """
     assert percent_population_to_return >= 1 and percent_population_to_return <= 99 ,\
@@ -41,8 +43,10 @@ def evaluate_fitness(population,adjacency_matrix,percent_population_to_return = 
     print "avg distance : "+str(reduce(lambda x, y: x + y, distance) / len(distance))
     order =  np.argsort(distance) 
     no_to_return = int(len(order)*(percent_population_to_return/100.0))
-    return order[:no_to_return]
+    best = order[:no_to_return]
+    return best
     # TODO: use certainity to select "best" candidate with probablity.
+
 
 def is_valid(individual):
     if len(individual) != len(set(individual)):
@@ -62,20 +66,21 @@ def crossover_and_mutate(individual):
     else :
         return crossover_and_mutate(individual)
 
+def read_dataset(path):
+    df = pd.read_csv(path)
+    citi_names =  df.iloc[:, 0].dropna().values
+    df = df.drop(df.columns[0], axis=1)
+    return df.values,citi_names
+
 if __name__ == '__main__':
-    # create initial population
-    population_size = 10
-    population = population_generator(population_size,8)
     
     #read distances between cities
-    with open('adjacency_matrix.txt') as f:
-        lines = f.readlines()
-    cities = int(lines[0])
-    distance_matrix = []
-    for i in range(cities):
-        distance_matrix.append(list(map(int,lines[i+1].strip().split(' '))))
-    
-    for iter in range(100):
+    distance_matrix,citi_names = read_dataset('./Data Sets/TS_Distances_Between_Cities.csv')
+
+    # create initial population
+    population = population_generator(POPULATION_SIZE,len(citi_names))
+
+    for iter in range(GENERATIONS):
         print "iteration : "+str(iter)
         # call fitness function
         fit_population = evaluate_fitness(population,distance_matrix)
@@ -85,10 +90,9 @@ if __name__ == '__main__':
         population.index = range(len(population))
         #perform crossover and mutaton
         population = population.apply(crossover_and_mutate,axis=1)
-        children_to_add =  population_size - len(population)
+        children_to_add =  POPULATION_SIZE - len(population)
         # generate_new_population()
         for i in range(children_to_add):
             choice = random.randint(0,len(population)-1)
             population = population.append(crossover_and_mutate(population.iloc[choice]),ignore_index=True)
-    print population
         #check stopping condition
