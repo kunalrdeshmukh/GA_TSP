@@ -7,6 +7,10 @@ import sys
 
 POPULATION_SIZE = 100
 GENERATIONS = 50
+PERCENT_POPULATION_TO_SELECT = 40
+RESULTS_FILE_NAME = "KUNAL_DESHMUKH_GA_TS_Result.txt"
+PROGRESS_FILE_NAME = "KUNAL_DESHMUKH_GA_TS_Info.tx"
+DISTANCE_MATRIX_PATH = "./Data Sets/TS_Distances_Between_Cities.csv"
 
 def population_generator(no_of_individuals = 1000,no_of_genes_per_individual = 10):
     """ Generates a population for TSP with n no of population """
@@ -22,17 +26,14 @@ def population_generator(no_of_individuals = 1000,no_of_genes_per_individual = 1
 
 def calculate_distance(individual,**kwargs):
     a = 0
-    # if (len(individual) != len(set(individual))):
-    #     a += 100    # penalty for a duplicate element in a list
     for _, value in kwargs.iteritems():
         a_matrix = value
-    # print individual
     for i in range(len(individual)-1):
             a += a_matrix[individual[i]][individual[i+1]]
     return a
 
 
-def evaluate_fitness(population,adjacency_matrix,percent_population_to_return = 20 ,certainity = 100):
+def evaluate_fitness(population,adjacency_matrix,percent_population_to_return = 40 ,certainity = 100):
     """ This method evaluates the fitness of a population and returns indices of % of population 
     in "population to return with certainity passed as "certainity" """
     assert percent_population_to_return >= 1 and percent_population_to_return <= 99 ,\
@@ -40,12 +41,10 @@ def evaluate_fitness(population,adjacency_matrix,percent_population_to_return = 
     assert certainity > 0 and certainity <=100 , \
     "certainity needs to be more than 0 and less than 100. provided: %r" % no_of_genes_per_individual
     distance = population.apply(calculate_distance,a_matrix= adjacency_matrix, axis=1)
-    print "avg distance : "+str(reduce(lambda x, y: x + y, distance) / len(distance))
     order =  np.argsort(distance) 
     no_to_return = int(len(order)*(percent_population_to_return/100.0))
     best = order[:no_to_return]
     return best
-    # TODO: use certainity to select "best" candidate with probablity.
 
 
 def is_valid(individual):
@@ -55,6 +54,10 @@ def is_valid(individual):
         return True
 
 def crossover_and_mutate(individual):
+    """ This method tries to mimic biological operations of crossover and mutation
+        it accespts each individual in a population as input in the form of
+         pandas series. Returns mutated individual.
+    """
     choice = random.randint(0,100)
     if choice % 2 == 0:
         individual = ga_crossover.crossover(individual)
@@ -73,21 +76,30 @@ def read_dataset(path):
     return df.values,citi_names
 
 if __name__ == '__main__':
-    
+    F = open(PROGRESS_FILE_NAME,"w") 
+
     #read distances between cities
-    distance_matrix,citi_names = read_dataset('./Data Sets/TS_Distances_Between_Cities.csv')
+    distance_matrix,citi_names = read_dataset(DISTANCE_MATRIX_PATH)
 
     # create initial population
     population = population_generator(POPULATION_SIZE,len(citi_names))
-
+    best_candidate = []
     for iter in range(GENERATIONS):
-        print "iteration : "+str(iter)
+        F.write("iteration : "+str(iter)+'\n')
         # call fitness function
-        fit_population = evaluate_fitness(population,distance_matrix)
+        fit_population = evaluate_fitness(population,distance_matrix,PERCENT_POPULATION_TO_SELECT)
         
         # select fitness
+        F.write("Population size : "+str(population.shape[0])+'\n')
         population =  population.ix[fit_population]
         population.index = range(len(population))
+        distance = population.apply(calculate_distance,a_matrix= distance_matrix, axis=1)
+        F.write("Average fitness score : "+str(distance.mean())+'\n')
+        F.write("Median fitness score : "+str(distance.median())+'\n')
+        F.write( "STD of fitness scores : "+str(distance.std())+'\n')
+        F.write( "Size of the selected subset of the population : "+str(population.shape[0])+'\n\n')
+        argsmin = distance.idxmin()
+        best_candidate = population.ix[argsmin]
         #perform crossover and mutaton
         population = population.apply(crossover_and_mutate,axis=1)
         children_to_add =  POPULATION_SIZE - len(population)
@@ -96,3 +108,9 @@ if __name__ == '__main__':
             choice = random.randint(0,len(population)-1)
             population = population.append(crossover_and_mutate(population.iloc[choice]),ignore_index=True)
         #check stopping condition
+    F.close()
+    best_candidate = best_candidate.values
+    F = open(RESULTS_FILE_NAME,"w") 
+    for city in best_candidate:
+        F.write(str(city)+" "+str(citi_names[city])+'\n')
+    F.close()
